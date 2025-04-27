@@ -43,3 +43,14 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - creating a folder outside of our lib
     - inside that we will use db folder
         - schema.ts    
+        - done creating a schema
+
+    - now creating a connection with database
+        - index.ts
+        - done creating a connection with database
+
+- now configure the package.json file to run the migration
+    - db:push : drizzle-kit push
+    - db:studio : drizzle-kit studio
+    - db:generate : drizzle-kit generate
+    - db:migrate: tsx src/lib/db/migrate.ts
