@@ -54,3 +54,10 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
     - db:studio : drizzle-kit studio
     - db:generate : drizzle-kit generate
     - db:migrate: tsx src/lib/db/migrate.ts
+
+- created schemas using zod
+
+- now we will be using clerk
+- with react hook forms
+
+- setting up clerk with next js
