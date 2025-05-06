@@ -32,7 +32,7 @@ export async function PATCH(
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    // Toggle the isTrash status (move to trash or restore)
+    // Toggle the isTrashed status (move to trash or restore)
     const [updatedFile] = await db
       .update(files)
       .set({ isTrashed: !file.isTrashed })
