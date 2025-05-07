@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: 'Poppins', system-ui, sans-serif;
+  }
+
+  html {
+    font-family: var(--font-sans);
+  }
+}
+
+/* Logo glow animation */
+@keyframes logoGlow {
+  0% {
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6));
+    transform: scale(0.98);
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.8)) 
+           drop-shadow(0 0 25px rgba(168, 85, 247, 0.5));
+    transform: scale(1.02);
+  }
+  100% {
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6));
+    transform: scale(0.98);
+  }
+}
+
+.logo-glow {
+  animation: logoGlow 4s ease-in-out infinite;
+}
+
+
