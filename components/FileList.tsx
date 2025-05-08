@@ -193,10 +193,18 @@ export default function FileList({
       const isCurrentlyTrashed = file.isTrashed;
       const fileName = file.name;
 
+      // Show a loading toast first
+      const loadingToastId = addToast({
+        title: isCurrentlyTrashed ? "Restoring..." : "Moving to trash...",
+        description: `Processing "${fileName}"`,
+        color: "primary",
+        duration: 2000, // Short duration since we'll replace it
+      });
+
       // Make the API call to toggle trash status
       await axios.patch(`/api/files/${fileId}/trash`);
       
-      // Update local state
+      // Update local state AFTER the API call succeeds
       setFiles(
         files.map((file) =>
           file.id === fileId ? { ...file, isTrashed: !file.isTrashed } : file
@@ -206,10 +214,10 @@ export default function FileList({
       // Update counts
       if (isCurrentlyTrashed) {
         setTrashCount(prev => prev - 1);
-        setAllFilesCount(prev => prev + 1); // Add this line
+        setAllFilesCount(prev => prev + 1);
       } else {
         setTrashCount(prev => prev + 1);
-        setAllFilesCount(prev => prev - 1); // Add this line
+        setAllFilesCount(prev => prev - 1);
       }
 
       // Show appropriate toast message based on the action
@@ -225,11 +233,7 @@ export default function FileList({
       triggerStorageUpdate();
     } catch (error) {
       console.error("Error updating file trash status:", error);
-      addToast({
-        title: "Action Failed",
-        description: "We couldn't update the file status. Please try again.",
-        color: "danger",
-      });
+     
     }
   };
 
@@ -296,15 +300,6 @@ export default function FileList({
       
     } catch (error) {
       console.error("Error deleting file/folder:", error);
-      
-      // Show error toast only if deletion fails
-      const errorMessage = error.response?.data?.error || "We couldn't delete this item. Please try again later.";
-      
-      addToast({
-        title: "Deletion Failed",
-        description: errorMessage,
-        color: "danger",
-      });
     }
   };
 
