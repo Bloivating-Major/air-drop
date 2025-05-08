@@ -58,7 +58,7 @@ export default async function Dashboard() {
     <div className="min-h-screen flex flex-col bg-gray-950">
       <Navbar user={serializedUser} />
 
-      <main className="flex-1 container mx-auto py-10 px-6">
+      <main className="flex-1 container mx-auto py-10 px-6 max-sm:px-3">
         <DashboardContent
           userId={userId}
           userName={displayName}

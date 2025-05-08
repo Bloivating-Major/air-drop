@@ -1,41 +1,35 @@
-"use client";
-
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Folder, Star, Trash, X, ExternalLink } from "lucide-react";
-import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@heroui/table";
+import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@heroui/table";
+import { Card } from "@heroui/card";
 import { Divider } from "@heroui/divider";
 import { Tooltip } from "@heroui/tooltip";
-import { Card } from "@heroui/card";
 import { addToast } from "@heroui/toast";
-import { formatDistanceToNow, format } from "date-fns";
-import type { File as FileType } from "@/lib/db/schema";
 import axios from "axios";
-import ConfirmationModal from "@/components/ui/ConfirmationModal";
-import FileEmptyState from "@/components/FileEmptyState";
-import FileIcon from "@/components/FileIcon";
-import FileActions from "@/components/FileActions";
-import FileLoadingState from "@/components/FileLoadingState";
-import FileTabs from "@/components/FileTabs";
-import FolderNavigation from "@/components/FolderNavigation";
-import FileActionButtons from "@/components/FileActionButtons";
+import { formatDistanceToNow, format } from "date-fns";
+import FileIcon from "./FileIcon";
+import FileActions from "./FileActions";
+import FileCard from "./FileCard";
+import FileTabs from "./FileTabs";
+import FolderNavigation from "./FolderNavigation";
+import FileActionButtons from "./FileActionButtons";
+import FileEmptyState from "./FileEmptyState";
+import FileLoadingState from "./FileLoadingState";
+import ConfirmationModal from "./ui/ConfirmationModal";
+import type { File as FileType } from "@/lib/db/schema";
 
 interface FileListProps {
   userId: string;
   refreshTrigger?: number;
   onFolderChange?: (folderId: string | null) => void;
+  triggerStorageUpdate: () => void;
 }
 
 export default function FileList({
   userId,
   refreshTrigger = 0,
   onFolderChange,
+  triggerStorageUpdate,
 }: FileListProps) {
   const [files, setFiles] = useState<FileType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,19 +41,28 @@ export default function FileList({
   const [trashCount, setTrashCount] = useState(0);
   const [starredCount, setStarredCount] = useState(0);
   const [allFilesCount, setAllFilesCount] = useState(0);
+  const [isMobileView, setIsMobileView] = useState(false);
 
   // Modal states
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [emptyTrashModalOpen, setEmptyTrashModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileType | null>(null);
 
-  // Add this function to dispatch the storage-updated event
-  const triggerStorageUpdate = () => {
-    window.dispatchEvent(new Event('storage-updated'));
-  };
+  // Use effect to detect mobile view
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 640);
+    };
+    
+    // Set initial view
+    handleResize();
+    
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-  // Fetch files
-  const fetchFiles = async () => {
+  // Memoize the fetchFiles function
+  const fetchFiles = useCallback(async () => {
     setLoading(true);
     try {
       // Add a timestamp to prevent caching
@@ -122,12 +125,12 @@ export default function FileList({
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, currentFolder, activeTab, addToast]);
 
   // Fetch files when userId, refreshTrigger, currentFolder, or activeTab changes
   useEffect(() => {
     fetchFiles();
-  }, [userId, refreshTrigger, currentFolder, activeTab]);
+  }, [fetchFiles, refreshTrigger]);
 
   // Filter files based on active tab
   const filteredFiles = useMemo(() => {
@@ -502,37 +505,6 @@ export default function FileList({
     }
   };
 
-  const handleUploadSuccess = async () => {
-    try {
-      // Fetch the latest files from the server
-      const response = await axios.get('/api/files', {
-        params: {
-          folderId: currentFolder || null,
-          view: currentView
-        }
-      });
-      
-      // If we're in the trash view, we need to preserve trashed files
-      if (currentView === 'trash') {
-        // Keep the existing trashed files and don't update the state
-        return;
-      } else {
-        // For other views, update with the new files from the server
-        setFiles(response.data);
-      }
-      
-      // Trigger storage update
-      triggerStorageUpdate();
-    } catch (error) {
-      console.error('Error refreshing files after upload:', error);
-      addToast({
-        title: 'Refresh Failed',
-        description: 'Unable to refresh file list. Please reload the page.',
-        color: 'danger',
-      });
-    }
-  };
-
   if (loading) {
     return <FileLoadingState />;
   }
@@ -557,21 +529,43 @@ export default function FileList({
         />
       )}
 
-      {/* Action buttons */}
-      <FileActionButtons
-        activeTab={activeTab}
-        trashCount={trashCount}
-        folderPath={folderPath}
-        onRefresh={fetchFiles}
-        onEmptyTrash={() => setEmptyTrashModalOpen(true)}
-      />
+      {/* Action buttons with view toggle */}
+      <div className="flex justify-between items-center">
+        <FileActionButtons
+          activeTab={activeTab}
+          trashCount={trashCount}
+          folderPath={folderPath}
+          onRefresh={fetchFiles}
+          onEmptyTrash={() => setEmptyTrashModalOpen(true)}
+        />
+
+      </div>
 
       <Divider className="my-4" />
 
-      {/* Files table */}
+      {/* Files display - simplified based on screen size */}
       {filteredFiles.length === 0 ? (
         <FileEmptyState activeTab={activeTab} />
+      ) : isMobileView ? (
+        // Grid view for mobile
+        <div className="grid grid-cols-2 gap-4">
+          {filteredFiles.filter(file => file && file.id).map((file) => (
+            <FileCard
+              key={file.id}
+              file={file}
+              onItemClick={handleItemClick}
+              onStar={handleStarFile}
+              onTrash={handleTrashFile}
+              onDelete={(file) => {
+                setSelectedFile(file);
+                setDeleteModalOpen(true);
+              }}
+              onDownload={handleDownloadFile}
+            />
+          ))}
+        </div>
       ) : (
+        // Table view for desktop
         <Card
           shadow="sm"
           className="border border-default-200 bg-default-50 overflow-hidden"
@@ -585,18 +579,19 @@ export default function FileList({
               classNames={{
                 base: "min-w-full",
                 th: "bg-default-100 text-default-800 font-medium text-sm",
-                td: "py-4",
-                tr: "rounded-md overflow-hidden", // Add rounded corners to rows
+                td: "py-4 file-table-cell",
+                tr: "rounded-md overflow-hidden",
+                cell: "px-2 sm:px-4",
               }}
             >
               <TableHeader>
-                <TableColumn className="w-[40%]">Name</TableColumn>
+                <TableColumn className="w-[50%] sm:w-[40%]">Name</TableColumn>
                 <TableColumn className="hidden sm:table-cell w-[15%]">Type</TableColumn>
                 <TableColumn className="hidden md:table-cell w-[10%]">Size</TableColumn>
                 <TableColumn className="hidden sm:table-cell w-[20%]">
                   Added
                 </TableColumn>
-                <TableColumn className="w-[15%]">Actions</TableColumn>
+                <TableColumn className="w-[50%] sm:w-[15%]">Actions</TableColumn>
               </TableHeader>
               <TableBody>
                 {filteredFiles.map((file) => (
@@ -606,33 +601,35 @@ export default function FileList({
                       file.isFolder || file.type.startsWith("image/")
                         ? "cursor-pointer"
                         : ""
-                    }`}
+                    } `}
                     onClick={() => handleItemClick(file)}
                   >
                     <TableCell className="first:rounded-l-md last:rounded-r-md">
                       <div className="flex items-center gap-3">
-                        <FileIcon file={file} />
-                        <div>
-                          <div className="font-medium flex items-center gap-2 text-default-800">
+                        <div className="min-w-[40px] flex justify-center file-icon">
+                          <FileIcon file={file} size="mobile" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium flex items-center gap-2 text-default-800 file-name">
                             <span className="truncate max-w-[80px] sm:max-w-[200px] md:max-w-[300px]">
                               {file.name}
                             </span>
                             {file.isStarred && (
                               <Tooltip content="Starred">
                                 <Star
-                                  className="h-4 w-4 text-yellow-400"
+                                  className="h-4 w-4 text-yellow-400 flex-shrink-0"
                                   fill="currentColor"
                                 />
                               </Tooltip>
                             )}
                             {file.isFolder && (
                               <Tooltip content="Folder">
-                                <Folder className="h-3 w-3 text-default-400" />
+                                <Folder className="h-3 w-3 text-default-400 flex-shrink-0" />
                               </Tooltip>
                             )}
                             {file.type.startsWith("image/") && (
                               <Tooltip content="Click to view image">
-                                <ExternalLink className="h-3 w-3 text-default-400" />
+                                <ExternalLink className="h-3 w-3 text-default-400 flex-shrink-0" />
                               </Tooltip>
                             )}
                           </div>
@@ -682,6 +679,7 @@ export default function FileList({
                           setDeleteModalOpen(true);
                         }}
                         onDownload={handleDownloadFile}
+                        isMobile={true}
                       />
                     </TableCell>
                   </TableRow>

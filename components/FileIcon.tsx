@@ -6,22 +6,27 @@ import type { File as FileType } from "@/lib/db/schema";
 
 interface FileIconProps {
   file: FileType;
+  size?: "default" | "mobile";
 }
 
-export default function FileIcon({ file }: FileIconProps) {
-  if (file.isFolder) return <Folder className="h-5 w-5 text-blue-500" />;
+export default function FileIcon({ file, size = "default" }: FileIconProps) {
+  // Determine icon sizes based on viewport
+  const iconSize = size === "mobile" ? "h-6 w-6" : "h-5 w-5";
+  const imageSize = size === "mobile" ? "h-14 w-14" : "h-12 w-12";
+  
+  if (file.isFolder) return <Folder className={`${iconSize} text-blue-500`} />;
 
   const fileType = file.type.split("/")[0];
   switch (fileType) {
     case "image":
       return (
-        <div className="h-12 w-12 relative overflow-hidden rounded">
+        <div className={`${imageSize} relative overflow-hidden rounded`}>
           <IKImage
             path={file.path}
             transformation={[
               {
-                height: 48,
-                width: 48,
+                height: size === "mobile" ? 56 : 48,
+                width: size === "mobile" ? 56 : 48,
                 focus: "auto",
                 quality: 80,
                 dpr: 2,
@@ -36,12 +41,12 @@ export default function FileIcon({ file }: FileIconProps) {
       );
     case "application":
       if (file.type.includes("pdf")) {
-        return <FileText className="h-5 w-5 text-red-500" />;
+        return <FileText className={`${iconSize} text-red-500`} />;
       }
-      return <FileText className="h-5 w-5 text-orange-500" />;
+      return <FileText className={`${iconSize} text-orange-500`} />;
     case "video":
-      return <FileText className="h-5 w-5 text-purple-500" />;
+      return <FileText className={`${iconSize} text-purple-500`} />;
     default:
-      return <FileText className="h-5 w-5 text-gray-500" />;
+      return <FileText className={`${iconSize} text-gray-500`} />;
   }
 }

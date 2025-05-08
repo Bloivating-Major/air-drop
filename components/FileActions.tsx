@@ -1,14 +1,17 @@
 "use client";
 
-import { Star, Trash, X, ArrowUpFromLine, Download } from "lucide-react";
-import { Button, Tooltip } from "@heroui/react";
+import { Star, Trash, Download, ArrowUpFromLine, X } from "lucide-react";
+import { Button } from "@heroui/button";
+import { Tooltip } from "@heroui/tooltip";
+import type { File as FileType } from "@/lib/db/schema";
 
 interface FileActionsProps {
   file: FileType;
-  onStar: (id: string) => void;
-  onTrash: (id: string) => void;
+  onStar: (fileId: string) => void;
+  onTrash: (fileId: string) => void;
   onDelete: (file: FileType) => void;
   onDownload: (file: FileType) => void;
+  isMobile?: boolean;
 }
 
 export default function FileActions({
@@ -17,7 +20,15 @@ export default function FileActions({
   onTrash,
   onDelete,
   onDownload,
+  isMobile = false,
 }: FileActionsProps) {
+  // Adjust button sizes for mobile
+  const buttonSize = isMobile ? "md" : "sm";
+  const buttonClass = isMobile 
+    ? "min-w-0 w-10 h-10" 
+    : "min-w-0 w-9 h-9";
+  const iconSize = isMobile ? "h-5 w-5" : "h-4 w-4";
+
   return (
     <div className="flex items-center justify-end gap-1">
       {/* Star button */}
@@ -25,16 +36,16 @@ export default function FileActions({
         <Button
           isIconOnly
           variant="flat"
-          size="sm"
+          size={buttonSize}
           onClick={(e) => {
             e.stopPropagation();
             onStar(file.id);
           }}
-          className="min-w-0 w-9 h-9"
+          className={buttonClass}
           color={file.isStarred ? "warning" : "default"}
         >
           <Star
-            className={`h-4 w-4 ${file.isStarred ? "fill-warning" : ""}`}
+            className={`${iconSize} ${file.isStarred ? "fill-warning" : ""}`}
           />
         </Button>
       </Tooltip>
@@ -45,14 +56,14 @@ export default function FileActions({
           <Button
             isIconOnly
             variant="flat"
-            size="sm"
+            size={buttonSize}
             onClick={(e) => {
               e.stopPropagation();
               onDownload(file);
             }}
-            className="min-w-0 w-9 h-9"
+            className={buttonClass}
           >
-            <Download className="h-4 w-4" />
+            <Download className={iconSize} />
           </Button>
         </Tooltip>
       )}
@@ -62,18 +73,18 @@ export default function FileActions({
         <Button
           isIconOnly
           variant="flat"
-          size="sm"
+          size={buttonSize}
           onClick={(e) => {
             e.stopPropagation();
             onTrash(file.id);
           }}
-          className="min-w-0 w-9 h-9"
+          className={buttonClass}
           color={file.isTrashed ? "success" : "default"}
         >
           {file.isTrashed ? (
-            <ArrowUpFromLine className="h-4 w-4" />
+            <ArrowUpFromLine className={iconSize} />
           ) : (
-            <Trash className="h-4 w-4" />
+            <Trash className={iconSize} />
           )}
         </Button>
       </Tooltip>
@@ -84,15 +95,15 @@ export default function FileActions({
           <Button
             isIconOnly
             variant="flat"
-            size="sm"
+            size={buttonSize}
             color="danger"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(file);
             }}
-            className="min-w-0 w-9 h-9"
+            className={buttonClass}
           >
-            <X className="h-4 w-4" />
+            <X className={iconSize} />
           </Button>
         </Tooltip>
       )}
