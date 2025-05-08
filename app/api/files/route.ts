@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const parentId = searchParams.get('parentId');
     const view = searchParams.get('view') || 'all';
 
+    // Ensure we're filtering by the authenticated user's ID
     let query = db
       .select()
       .from(files)
@@ -22,10 +23,8 @@ export async function GET(request: NextRequest) {
 
     // Apply filters based on view
     if (view === 'trash') {
-      // Show only trashed files
       query = query.where(eq(files.isTrashed, true));
     } else if (view === 'starred') {
-      // Show only starred files that are not in trash
       query = query.where(
         and(
           eq(files.isStarred, true),
@@ -33,24 +32,23 @@ export async function GET(request: NextRequest) {
         )
       );
     } else if (view === 'all') {
-      // Show files that are not in trash
       query = query.where(eq(files.isTrashed, false));
       
-      // Filter by parent folder
       if (parentId) {
-        // If parentId is provided, show only files in that folder
         query = query.where(eq(files.parentId, parentId));
       } else {
-        // If no parentId (root level), show only files with no parent
         query = query.where(isNull(files.parentId));
       }
     }
 
-    // Order by folders first, then by name
     query = query.orderBy(desc(files.isFolder), asc(files.name));
 
     const userFiles = await query;
-    return NextResponse.json(userFiles);
+    
+    // Double-check that all returned files belong to the current user
+    const filteredFiles = userFiles.filter(file => file.userId === userId);
+    
+    return NextResponse.json(filteredFiles);
   } catch (error) {
     console.error("Error fetching files:", error);
     return NextResponse.json(

@@ -1,4 +1,4 @@
-import { pgTable, integer, boolean, text, uuid, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, integer, boolean, text, uuid, timestamp, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const files = pgTable("files", {
@@ -14,7 +14,7 @@ export const files = pgTable("files", {
     fileUrl: text("file_url").notNull(), // url to access file
     filethumbnailUrl: text("thumbnail_url"), // url to access thumbnail of file
 
-    // Ownership
+    // Ownership - ensure this is properly set for all files
     userId: text("user_id").notNull(), // user id of the user who uploaded the file
     parentId: uuid("parent_id"), // parent id of the file/folder
 
@@ -26,7 +26,14 @@ export const files = pgTable("files", {
     // timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(), // timestamp of when the file was created
     updatedAt: timestamp("updated_at").defaultNow().notNull(), // timestamp of when the file was updated
-})
+}, (table) => {
+    return {
+        // Add an index on userId for faster queries
+        userIdIdx: index("user_id_idx").on(table.userId),
+        // Add an index on parentId for faster folder queries
+        parentIdIdx: index("parent_id_idx").on(table.parentId)
+    }
+});
 
 // parent : Each file/folder can have one parent folder
 

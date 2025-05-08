@@ -62,9 +62,14 @@ export default function FileList({
   const fetchFiles = async () => {
     setLoading(true);
     try {
+      // Add a timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      
       // First, fetch ALL files to get accurate counts for all tabs
-      const allFilesResponse = await axios.get('/api/files');
+      const allFilesResponse = await axios.get(`/api/files?t=${timestamp}`);
       const allFiles = allFilesResponse.data;
+      
+      console.log(`Received ${allFiles.length} files from server`);
       
       // Calculate counts from all files
       const allTrashCount = allFiles.filter(file => file.isTrashed).length;
@@ -74,7 +79,7 @@ export default function FileList({
       // Update counts
       setTrashCount(allTrashCount);
       setStarredCount(allStarredCount);
-      setAllFilesCount(allFilesCount); // Add this line
+      setAllFilesCount(allFilesCount);
       
       // Now fetch files for the current view
       const params = new URLSearchParams();
@@ -87,13 +92,26 @@ export default function FileList({
         params.append('parentId', currentFolder);
       }
       
+      // Add timestamp to prevent caching
+      params.append('t', timestamp.toString());
+      
       const url = `/api/files?${params.toString()}`;
       console.log('Fetching files with URL:', url);
       
       const response = await axios.get(url);
-      setFiles(response.data);
+      const receivedFiles = response.data;
       
-      console.log('Files received:', response.data);
+      console.log(`Received ${receivedFiles.length} files for current view`);
+      
+      // Verify all files belong to the current user
+      if (userId && receivedFiles.length > 0) {
+        const nonUserFiles = receivedFiles.filter(file => file.userId !== userId);
+        if (nonUserFiles.length > 0) {
+          console.error(`WARNING: Found ${nonUserFiles.length} files that don't belong to current user`);
+        }
+      }
+      
+      setFiles(receivedFiles);
     } catch (error) {
       console.error("Error fetching files:", error);
       addToast({
